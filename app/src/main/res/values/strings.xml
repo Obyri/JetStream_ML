@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">JetStream ML</string>
+    <string name="action_settings">Settings</string>
+    <string name="info_play_failed">File failed to play</string>
+    <string name="info_handler_not_available">This file type cannot be handled by any installed App.</string>
+    <string name="search_for_devices">Rescan for Devices</string>
+    <string name="toggle_service">Toggle Service Off/On</string>
+    <string name="scanning">Scanning for devices</string>
+    <string name="no_control_point_service">An Error occurred, \nthe UPnP service \nControl Point was not Established.</string>
+    <string name="device_still_registering">Waiting for device to full register… Try again.</string>
+    <string name="cannot_browse">Cannot browse this service</string>
+    <string name="no_items">No Items</string>
+</resources>
