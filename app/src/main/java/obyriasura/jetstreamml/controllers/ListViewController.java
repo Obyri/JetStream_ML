@@ -1,3 +1,23 @@
+/*
+ * JetStream ML
+ * ListViewController.java
+ *     Copyright (C) 2015  Reice Robinson
+ *
+ *     This program is free software; you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation; either version 2 of the License, or
+ *     (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License along
+ *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
 package obyriasura.jetstreamml.controllers;
 
 import android.app.Activity;
@@ -10,12 +30,14 @@ import android.view.ViewGroup;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ListView;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
 import obyriasura.jetstreamml.R;
 import obyriasura.jetstreamml.models.item.AbstractItemModel;
+import obyriasura.jetstreamml.models.listAdapter.RowViewModel;
 
 /**
  * A fragment representing a list of Items.
@@ -38,12 +60,12 @@ public class ListViewController extends Fragment implements AbsListView.OnItemCl
      * The Adapter which will be used to populate the ListView/GridView with
      * Views.
      */
-    private ArrayAdapter<AbstractItemModel> mAdapter;
+    private ArrayAdapter<RowViewModel> mAdapter;
 
     /**
      * The ArrayList which is used to set and reset the ArrayAdapter items.
      */
-    private ArrayList<AbstractItemModel> mArrayList = new ArrayList<>();
+    private ArrayList<RowViewModel> mArrayList = new ArrayList<>();
 
     /**
      * The parent item to items in the list.
@@ -75,22 +97,8 @@ public class ListViewController extends Fragment implements AbsListView.OnItemCl
         // retain instances of the fragments for easy config change.
         setRetainInstance(true);
         if (savedInstanceState == null) {
-            mAdapter = new ButtonListAdapter<>(getActivity(),
+            mAdapter = new ListAdapterController<>(getActivity(),
                     R.layout.row_layout, mArrayList);
-        } else {
-            /* todo recreate the parent object and
-             * browse into it to update the adapter.
-             *
-             * ((MainActivityController)getActivity()).getServiceControlPoint().createBrowseAction()
-             *
-             */
-
-            // clear and reset from arrayList
-            if (mAdapter != null) {
-                ArrayList<AbstractItemModel> list = mArrayList;
-                mAdapter.clear();
-                mAdapter.addAll(list);
-            }
         }
     }
 
@@ -101,18 +109,12 @@ public class ListViewController extends Fragment implements AbsListView.OnItemCl
         View view = inflater.inflate(R.layout.fragment_list_item, container, false);
 
         // Set the adapter
-        mListView = new WeakReference<AbsListView>((AbsListView) view.findViewById(android.R.id.list));
+        mListView = new WeakReference<AbsListView>((ListView) view.findViewById(android.R.id.list));
         mListView.get().setAdapter(mAdapter);
 
         // Set OnItemClickListener so we can be notified on item clicks
         mListView.get().setOnItemClickListener(this);
         return view;
-    }
-
-    @Override
-    public void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        //outState.putString(UPNPID, mUpnpID);
     }
 
     @Override
@@ -129,7 +131,7 @@ public class ListViewController extends Fragment implements AbsListView.OnItemCl
         if (null != mListener) {
             // Notify the active callbacks interface (the activity, if the
             // fragment is attached to one) that an item has been selected.
-            mListener.onItemSelectListener(mAdapter.getItem(position));
+            mListener.onItemSelectListener(mAdapter.getItem(position).getItemModel());
         }
     }
 
@@ -148,10 +150,21 @@ public class ListViewController extends Fragment implements AbsListView.OnItemCl
      * @param arrayList the arrayList containing objects to set the list.
      */
     public void setAdapter(ArrayList<AbstractItemModel> arrayList) {
-        this.mArrayList = arrayList;
+        if (arrayList.size() <= 0) {
+            mAdapter.clear();
+            return;
+        }
+
+        ArrayList<RowViewModel> viewModels = new ArrayList<>();
+        for (AbstractItemModel item : arrayList) {
+            viewModels.add(new RowViewModel(item.toString(), item.getDescription(), this.getActivity(), item, item.getItemType()));
+        }
         if (mAdapter != null) {
             mAdapter.clear();
+            mArrayList = viewModels;
             mAdapter.addAll(mArrayList);
+        } else {
+            mArrayList = viewModels;
         }
     }
 

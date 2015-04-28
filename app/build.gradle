@@ -1,3 +1,23 @@
+/*
+ * JetStream ML
+ * build.gradle
+ *     Copyright (C) 2015  Reice Robinson
+ *
+ *     This program is free software; you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation; either version 2 of the License, or
+ *     (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License along
+ *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
 apply plugin: 'com.android.application'
 
 android {
@@ -9,12 +29,11 @@ android {
         minSdkVersion 15
         targetSdkVersion 22
         versionCode 1
-        versionName "1.0"
+        versionName "0.2.0"
     }
 
     buildTypes {
         release {
-            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
@@ -37,10 +56,10 @@ repositories {
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile 'com.android.support:appcompat-v7:22.0.0'
-    compile group: 'org.fourthline.cling', name: 'cling-core', version: '2.0-alpha3'
-    compile group: 'org.fourthline.cling', name: 'cling-support', version: '2.0-alpha3'
-    compile group: 'org.eclipse.jetty', name: 'jetty-server', version: '8.1.12.v20130726'
-    compile group: 'org.eclipse.jetty', name: 'jetty-servlet', version: '8.1.12.v20130726'
-    compile group: 'org.eclipse.jetty', name: 'jetty-client', version: '8.1.12.v20130726'
-    compile group: 'org.slf4j', name: 'slf4j-jdk14', version: '1.7.5'
+    compile 'org.fourthline.cling:cling-core:2.0-alpha3'
+    compile 'org.fourthline.cling:cling-support:2.0-alpha3'
+    compile 'org.eclipse.jetty:jetty-server:8.1.12.v20130726'
+    compile 'org.eclipse.jetty:jetty-servlet:8.1.12.v20130726'
+    compile 'org.eclipse.jetty:jetty-client:8.1.12.v20130726'
+    compile 'org.slf4j:slf4j-jdk14:1.7.5'
 }

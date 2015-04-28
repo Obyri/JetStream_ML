@@ -1,8 +1,24 @@
-package obyriasura.jetstreamml.models.service;
-/**
- * An android centric Upnp Service wrapper providing instantiation, binding and unbinding
- * with a listener interface for callback on device changes.
+/*
+ * JetStream ML
+ * UpnpServiceWrapper.java
+ *     Copyright (C) 2015  Reice Robinson
+ *
+ *     This program is free software; you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation; either version 2 of the License, or
+ *     (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License along
+ *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
+package obyriasura.jetstreamml.models.service;
 
 import android.app.Activity;
 import android.content.ComponentName;
@@ -20,6 +36,10 @@ import org.fourthline.cling.model.meta.RemoteDevice;
 import org.fourthline.cling.registry.DefaultRegistryListener;
 import org.fourthline.cling.registry.Registry;
 
+/**
+ * An android centric upnp Service wrapper providing instantiation, binding and unbinding
+ * with a listener interface for callback on device changes.
+ */
 public class UpnpServiceWrapper {
 
     private AndroidUpnpService mUpnpService;

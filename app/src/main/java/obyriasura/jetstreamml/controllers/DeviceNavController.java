@@ -1,10 +1,35 @@
+/*
+ * JetStream ML
+ * DeviceNavController.java
+ *     Copyright (C) 2015  Reice Robinson
+ *
+ *     This program is free software; you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation; either version 2 of the License, or
+ *     (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License along
+ *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
 package obyriasura.jetstreamml.controllers;
 
 import android.app.Activity;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.ActivityNotFoundException;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -17,6 +42,8 @@ import android.widget.Toast;
 
 import org.fourthline.cling.support.model.Res;
 
+import java.util.ArrayList;
+
 import obyriasura.jetstreamml.R;
 import obyriasura.jetstreamml.helpers.Constants;
 import obyriasura.jetstreamml.models.item.AbstractItemModel;
@@ -25,10 +52,54 @@ import obyriasura.jetstreamml.models.item.FolderModel;
 import obyriasura.jetstreamml.models.item.ItemModel;
 import obyriasura.jetstreamml.models.service.ServiceController;
 
-public class DeviceNavController extends Activity implements ListViewController.FragmentEventListener, ServiceController.ControlPointListener, FragmentManager.OnBackStackChangedListener {
+/**
+ * Main Activity controller class.
+ */
+public class DeviceNavController extends Activity implements ListViewController.FragmentEventListener, ServiceController.ControlPointListener {
 
     private ServiceController serviceController;
+    private BroadcastReceiver connectivityChange = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            boolean isLanConnected = false;
 
+            ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo wifiStatus = cm.getNetworkInfo(1);
+
+            if ((wifiStatus != null && (wifiStatus.getState() == NetworkInfo.State.CONNECTED || wifiStatus.getState() == NetworkInfo.State.CONNECTING)))
+                isLanConnected = true;
+
+            // Check for ethernet connection.
+            if (!isLanConnected) {
+                NetworkInfo ethStatus = cm.getNetworkInfo(9);
+                if (ethStatus != null && (ethStatus.getState() == NetworkInfo.State.CONNECTED || ethStatus.getState() == NetworkInfo.State.CONNECTING))
+                    isLanConnected = true;
+            }
+
+            if (isLanConnected) {
+                if (serviceController == null) {
+                    if (startUpnpService()) {
+                        makePopupWithMessage(getString(R.string.scanning));
+                        mLoadingSpinner.setVisibility(View.VISIBLE);
+                        return;
+                    }
+                    makePopupWithMessage("Service Failed to Start.");
+                    finish();
+                    return;
+                }
+            } else {
+                if (serviceController != null) {
+                    serviceController.dispose();
+                    serviceController = null;
+                    FragmentManager fm = getFragmentManager();
+                    // empty the fragment list
+                    ((ListViewController) fm.findFragmentByTag(Constants.DEVICE_LIST_TAG)).setAdapter(new ArrayList<AbstractItemModel>());
+                    fm.popBackStack(Constants.DEVICE_LIST_TAG, 0);
+                }
+                Toast.makeText(context, "This App Requires Local Network Connectivity", Toast.LENGTH_LONG).show();
+            }
+        }
+    };
     /**
      * Animated spinning progress widget.
      */
@@ -41,12 +112,16 @@ public class DeviceNavController extends Activity implements ListViewController.
         mLoadingSpinner = (ProgressBar) findViewById(R.id.spin_loader);
         mLoadingSpinner.setVisibility(View.VISIBLE);
 
-        if (!startService()) return;
+        if (!startUpnpService()) return;
+
+        // Listen for connectivity changes.
+        IntentFilter filter = new IntentFilter();
+        filter.addAction("android.net.conn.CONNECTIVITY_CHANGE");
+        registerReceiver(connectivityChange, filter);
 
         ListViewController devList = null;
         // attach fragment to main view to show devices available on the network.
         if (savedInstanceState != null) {
-            //devList = (ListViewController) this.getFragmentManager().findFragmentByTag("DeviceList");
             return;
         }
 
@@ -54,19 +129,15 @@ public class DeviceNavController extends Activity implements ListViewController.
         //SharedPreferences settings = getPreferences(MODE_PRIVATE);
 
         // Create the first frag if not returning from saved state.
-        if (devList == null) {
-            devList = new ListViewController();
-        }
-        FragmentManager fragmentManager = getFragmentManager();
-        fragmentManager.addOnBackStackChangedListener(this);
 
+        devList = new ListViewController();
         // add the root view to the stack.
-        FragmentTransaction trans = fragmentManager.beginTransaction();
+        FragmentTransaction trans = getFragmentManager().beginTransaction();
         trans.add(R.id.fragment_holder, devList, Constants.DEVICE_LIST_TAG);
         trans.commit();
     }
 
-    private boolean startService() {
+    private boolean startUpnpService() {
         // Everything relies on the service
         try {
             serviceController = new ServiceController(this);
@@ -133,7 +204,7 @@ public class DeviceNavController extends Activity implements ListViewController.
                 flag = serviceController.dispose();
                 serviceController = null;
             } else {
-                flag = startService();
+                flag = startUpnpService();
             }
             return flag;
         }
@@ -148,7 +219,8 @@ public class DeviceNavController extends Activity implements ListViewController.
 
         // unbind to stop leaking, from service stays active and is rebound onCreate
         serviceController.unBindService();
-        // todo save instance of current fragment. for orientation change
+        unregisterReceiver(connectivityChange);
+
         //Tear down upnp service completely when killing app.
         if (isFinishing())
             if (serviceController.dispose())
@@ -207,6 +279,12 @@ public class DeviceNavController extends Activity implements ListViewController.
         }
     }
 
+    @Override
+    public void onBackPressed() {
+        // todo cancel browse action.
+        super.onBackPressed();
+    }
+
     /**
      * Simple Toast message wrapper.
      *
@@ -238,7 +316,7 @@ public class DeviceNavController extends Activity implements ListViewController.
      */
     private void updateDeviceListFragment() {
         // Update the device list fragment.
-        ListViewController df = (ListViewController) this.getFragmentManager().findFragmentByTag("DeviceList");
+        ListViewController df = (ListViewController) this.getFragmentManager().findFragmentByTag(Constants.DEVICE_LIST_TAG);
         df.setAdapter(serviceController.getDevicesList());
     }
 
@@ -255,6 +333,8 @@ public class DeviceNavController extends Activity implements ListViewController.
         });
     }
 
+    /* End of callback methods */
+
     @Override
     public void browseComplete(final AbstractItemModel item) {
         runOnUiThread(new Runnable() {
@@ -265,11 +345,4 @@ public class DeviceNavController extends Activity implements ListViewController.
             }
         });
     }
-
-    @Override
-    public void onBackStackChanged() {
-        FragmentManager fragmentManager = getFragmentManager();
-        int backStackCount = fragmentManager.getBackStackEntryCount();
-    }
-    /* End of callback methods */
 }

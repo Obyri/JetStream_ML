@@ -1,6 +1,6 @@
 /*
  * JetStream ML
- * Constants.java
+ * itemTypeEnum.java
  *     Copyright (C) 2015  Reice Robinson
  *
  *     This program is free software; you can redistribute it and/or modify
@@ -21,21 +21,19 @@
 package obyriasura.jetstreamml.helpers;
 
 /**
- * Constants used by the app.
+ * Enum of item types.
  */
-public class Constants {
+public enum ItemTypeEnum {
+    TYPE_DEVICE("DeviceModel"), TYPE_FOLDER("FolderModel"), TYPE_ITEM("ItemModel"), TYPE_UNKNOWN("Unknown");
 
-    public static final String DEVICE_LIST_TAG = "DeviceList";
-    public static final int MAX_DESCRIPTION_LENGTH = 320;
+    private final String typeName;
 
-    // TODO future use.
-    public static final String KEY_ITEM_ID = "ItemID";
-    public static final String KEY_ITEM_NAME = "ItemName";
-    public static final String KEY_PARENT_ITEM_ID = "ParentItemID";
-    public static final String KEY_PARENT_ITEM_NAME = "ParentItemName";
-    public static final String KEY_DEVICE_ID = "DeviceID";
-    public static final String KEY_DEVICE_NAME = "DeviceName";
+    private ItemTypeEnum(String typeName) {
+        this.typeName = typeName;
+    }
 
-    private Constants() {
+    @Override
+    public String toString() {
+        return this.typeName;
     }
 }

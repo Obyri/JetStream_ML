@@ -1,3 +1,23 @@
+/*
+ * JetStream ML
+ * DeviceModel.java
+ *     Copyright (C) 2015  Reice Robinson
+ *
+ *     This program is free software; you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation; either version 2 of the License, or
+ *     (at your option) any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License along
+ *     with this program; if not, write to the Free Software Foundation, Inc.,
+ *     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
 package obyriasura.jetstreamml.models.item;
 
 import org.fourthline.cling.model.meta.Device;
@@ -9,16 +29,17 @@ import org.seamless.util.MimeType;
 import java.net.MalformedURLException;
 import java.net.URL;
 
+import obyriasura.jetstreamml.helpers.ItemTypeEnum;
 import obyriasura.jetstreamml.models.service.ServiceController;
 
 /**
- * Created by obyri on 3/31/15.
+ * A Concrete model describing a media device on the network.
  */
 public class DeviceModel extends AbstractItemModel {
     private final Device device;
     private Icon deviceIcon;
 
-    public DeviceModel(Device device) throws DeviceNotFitModelException {
+    public DeviceModel(Device device) throws DeviceMismatchException {
         super(device.getIdentity().toString());
 
         // Add the device if it is browseable
@@ -31,12 +52,18 @@ public class DeviceModel extends AbstractItemModel {
             }
         }
         if (!browseable) {
-            throw new DeviceNotFitModelException("Not the device we are looking for.");
+            throw new DeviceMismatchException("Not the device we are looking for.");
         }
         this.device = device;
+        setItemType(ItemTypeEnum.TYPE_DEVICE);
 
         // add the icon from the device.
         addIcon();
+        setIconUrl(null);
+    }
+
+    public Device getDevice() {
+        return device;
     }
 
     /**
@@ -60,12 +87,21 @@ public class DeviceModel extends AbstractItemModel {
         }
     }
 
-    public Device getDevice() {
-        return device;
-    }
+    @Override
+    public void setIconUrl(URL iconUrl) {
+        if (iconUrl == null) {
+            if (device instanceof RemoteDevice && deviceIcon != null) {
+                super.setIconUrl(((RemoteDevice) device).normalizeURI(deviceIcon.getUri()));
+            }
 
-    public Icon getDeviceIcon() {
-        return deviceIcon;
+            try {
+                super.setIconUrl(deviceIcon != null ? deviceIcon.getUri().toURL() : null);
+            } catch (MalformedURLException ex) {/* do nothing */} catch (IllegalArgumentException ex) {
+                ex.getMessage();
+            }
+        } else {
+            super.setIconUrl(iconUrl);
+        }
     }
 
     @Override
@@ -73,6 +109,7 @@ public class DeviceModel extends AbstractItemModel {
         return serviceController != null && serviceController.createBrowseAction(this.getContentDirectoryService(), "0", this);
     }
 
+    @Override
     public String getDescription() {
         StringBuilder descriptionString = new StringBuilder();
         try {
@@ -82,19 +119,6 @@ public class DeviceModel extends AbstractItemModel {
             return "";
         }
         return descriptionString.toString();
-    }
-
-    @Override
-    public URL getIconUrl() {
-        if (device instanceof RemoteDevice && deviceIcon != null) {
-            return ((RemoteDevice) device).normalizeURI(deviceIcon.getUri());
-        }
-
-        try {
-            return deviceIcon != null ? deviceIcon.getUri().toURL() : null;
-        } catch (MalformedURLException ex) {
-            return null;
-        }
     }
 
     @Override
@@ -118,8 +142,8 @@ public class DeviceModel extends AbstractItemModel {
 
     }
 
-    public class DeviceNotFitModelException extends Exception {
-        public DeviceNotFitModelException(String message) {
+    public class DeviceMismatchException extends Exception {
+        public DeviceMismatchException(String message) {
             super(message);
         }
     }
