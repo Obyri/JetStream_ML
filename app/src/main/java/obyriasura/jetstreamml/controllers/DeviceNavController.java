@@ -50,14 +50,18 @@ import obyriasura.jetstreamml.models.item.AbstractItemModel;
 import obyriasura.jetstreamml.models.item.DeviceModel;
 import obyriasura.jetstreamml.models.item.FolderModel;
 import obyriasura.jetstreamml.models.item.ItemModel;
-import obyriasura.jetstreamml.models.service.ServiceController;
+import obyriasura.jetstreamml.models.service.ServiceManager;
 
 /**
  * Main Activity controller class.
  */
-public class DeviceNavController extends Activity implements ListViewController.FragmentEventListener, ServiceController.ControlPointListener {
+public class DeviceNavController extends Activity implements ListViewController.FragmentEventListener, ServiceManager.ControlPointListener {
 
-    private ServiceController serviceController;
+    private ServiceManager serviceManager;
+    /**
+     * Animated spinning progress widget.
+     */
+    private ProgressBar mLoadingSpinner;
     private BroadcastReceiver connectivityChange = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -77,7 +81,7 @@ public class DeviceNavController extends Activity implements ListViewController.
             }
 
             if (isLanConnected) {
-                if (serviceController == null) {
+                if (serviceManager == null) {
                     if (startUpnpService()) {
                         makePopupWithMessage(getString(R.string.scanning));
                         mLoadingSpinner.setVisibility(View.VISIBLE);
@@ -88,9 +92,9 @@ public class DeviceNavController extends Activity implements ListViewController.
                     return;
                 }
             } else {
-                if (serviceController != null) {
-                    serviceController.dispose();
-                    serviceController = null;
+                if (serviceManager != null) {
+                    serviceManager.dispose();
+                    serviceManager = null;
                     FragmentManager fm = getFragmentManager();
                     // empty the fragment list
                     ((ListViewController) fm.findFragmentByTag(Constants.DEVICE_LIST_TAG)).setAdapter(new ArrayList<AbstractItemModel>());
@@ -100,10 +104,7 @@ public class DeviceNavController extends Activity implements ListViewController.
             }
         }
     };
-    /**
-     * Animated spinning progress widget.
-     */
-    private ProgressBar mLoadingSpinner;
+    private boolean isBrowseInProgress = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -140,7 +141,7 @@ public class DeviceNavController extends Activity implements ListViewController.
     private boolean startUpnpService() {
         // Everything relies on the service
         try {
-            serviceController = new ServiceController(this);
+            serviceManager = new ServiceManager(this);
         } catch (IllegalArgumentException ex) {
             ex.printStackTrace();
             makePopupWithMessage("Fatal Error: Service Failed to Start.");
@@ -152,7 +153,7 @@ public class DeviceNavController extends Activity implements ListViewController.
     @Override
     public boolean onCreateOptionsMenu(final Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_browse_controller, menu);
+        getMenuInflater().inflate(R.menu.menu_browse_view, menu);
         MenuItem item = menu.findItem(R.id.action_settings);
         item.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
@@ -189,20 +190,20 @@ public class DeviceNavController extends Activity implements ListViewController.
             return true;
         }
         if (id == R.id.rescan_button) {
-            if (serviceController == null)
+            if (serviceManager == null)
                 return false;
             makePopupWithMessage(getString(R.string.scanning));
-            serviceController.getControlPoint().getRegistry().removeAllRemoteDevices();
-            serviceController.getControlPoint().search();
+            serviceManager.getControlPoint().getRegistry().removeAllRemoteDevices();
+            serviceManager.getControlPoint().search();
             return true;
         }
 
         if (id == R.id.toggle_service) {
             if (isChangingConfigurations()) return true;
             boolean flag;
-            if (serviceController != null) {
-                flag = serviceController.dispose();
-                serviceController = null;
+            if (serviceManager != null) {
+                flag = serviceManager.dispose();
+                serviceManager = null;
             } else {
                 flag = startUpnpService();
             }
@@ -218,13 +219,13 @@ public class DeviceNavController extends Activity implements ListViewController.
         Log.d(getString(R.string.app_name), "onDestroy");
 
         // unbind to stop leaking, from service stays active and is rebound onCreate
-        serviceController.unBindService();
+        serviceManager.unBindService();
         unregisterReceiver(connectivityChange);
 
         //Tear down upnp service completely when killing app.
         if (isFinishing())
-            if (serviceController.dispose())
-                serviceController = null;
+            if (serviceManager.dispose())
+                serviceManager = null;
 
         super.onDestroy();
     }
@@ -232,57 +233,66 @@ public class DeviceNavController extends Activity implements ListViewController.
     // Fragment listener method, The fragment will call this to update the view.
     @Override
     public void onItemSelectListener(Object selectedItem) {
-        // Play/show the file with and app on the device
-        if (selectedItem instanceof ItemModel) {
-            // create intent to system to handle file uri
-            try {
-                ItemModel item = (ItemModel) selectedItem;
-                Res res = item.getItem().getFirstResource();
-                if (res == null)
-                    return;
-                Uri uri = Uri.parse(res.getValue());
-                MimeTypeMap mime = MimeTypeMap.getSingleton();
-                String type = mime.getMimeTypeFromExtension(MimeTypeMap.getFileExtensionFromUrl(uri.toString()));
-                if (type == null) {
-                    type = res.getProtocolInfo().getContentFormat();
+        if (!isBrowseInProgress) {// todo get reference to the browse thread and cancel it.
+            // Play/show the file with and app on the device
+            if (selectedItem instanceof ItemModel) {
+                // create intent to system to handle file uri
+                try {
+                    ItemModel item = (ItemModel) selectedItem;
+                    Res res = item.getItem().getFirstResource();
+                    if (res == null)
+                        return;
+                    Uri uri = Uri.parse(res.getValue());
+                    MimeTypeMap mime = MimeTypeMap.getSingleton();
+                    String type = mime.getMimeTypeFromExtension(MimeTypeMap.getFileExtensionFromUrl(uri.toString()));
+                    if (type == null) {
+                        type = res.getProtocolInfo().getContentFormat();
+                    }
+                    Intent intent = new Intent();
+                    intent.setAction(android.content.Intent.ACTION_VIEW);
+                    intent.setDataAndType(uri, type);
+                    startActivity(intent);
+                } catch (NullPointerException ex) {
+                    makePopupWithMessage(getString(R.string.info_play_failed));
+                } catch (ActivityNotFoundException ex) {
+                    makePopupWithMessage(getString(R.string.info_handler_not_available));
                 }
-                Intent intent = new Intent();
-                intent.setAction(android.content.Intent.ACTION_VIEW);
-                intent.setDataAndType(uri, type);
-                startActivity(intent);
-            } catch (NullPointerException ex) {
-                makePopupWithMessage(getString(R.string.info_play_failed));
-            } catch (ActivityNotFoundException ex) {
-                makePopupWithMessage(getString(R.string.info_handler_not_available));
+                return;
             }
-            return;
-        }
 
-        mLoadingSpinner.setVisibility(View.VISIBLE);
+            mLoadingSpinner.setVisibility(View.VISIBLE);
+            isBrowseInProgress = true;
 
-        if (selectedItem instanceof DeviceModel) {
-            final DeviceModel deviceModel = (DeviceModel) selectedItem;
-            if (deviceModel.getDevice().isFullyHydrated()) {
-                if (!deviceModel.browseChildren(serviceController))
-                    makePopupWithMessage(getString(R.string.cannot_browse));
-            } else {
-                makePopupWithMessage(getString(R.string.device_still_registering));
+            if (selectedItem instanceof DeviceModel) {
+                final DeviceModel deviceModel = (DeviceModel) selectedItem;
+                if (deviceModel.getDevice().isFullyHydrated()) {
+                    if (!deviceModel.browseChildren(serviceManager)) {
+                        makePopupWithMessage(getString(R.string.cannot_browse));
+                        isBrowseInProgress = false;
+                    }
+                } else {
+                    makePopupWithMessage(getString(R.string.device_still_registering));
+                }
             }
-        }
 
-        if (selectedItem instanceof FolderModel) {
-            final FolderModel folderModel = (FolderModel) selectedItem;
-            if (folderModel.getFolder() != null) {
-                if (!folderModel.browseChildren(serviceController))
-                    makePopupWithMessage(getString(R.string.cannot_browse));
+            if (selectedItem instanceof FolderModel) {
+                final FolderModel folderModel = (FolderModel) selectedItem;
+                if (folderModel.getFolder() != null) {
+                    if (!folderModel.browseChildren(serviceManager)) {
+                        makePopupWithMessage(getString(R.string.cannot_browse));
+                        isBrowseInProgress = false;
+                    }
+                }
             }
         }
     }
 
     @Override
     public void onBackPressed() {
-        // todo cancel browse action.
-        super.onBackPressed();
+        // block any action while a browse is in progress.
+        // todo prolly can cancel browse action with thread ref
+        if (!isBrowseInProgress)
+            super.onBackPressed();
     }
 
     /**
@@ -317,7 +327,7 @@ public class DeviceNavController extends Activity implements ListViewController.
     private void updateDeviceListFragment() {
         // Update the device list fragment.
         ListViewController df = (ListViewController) this.getFragmentManager().findFragmentByTag(Constants.DEVICE_LIST_TAG);
-        df.setAdapter(serviceController.getDevicesList());
+        df.setAdapter(serviceManager.getDevicesList());
     }
 
     /* Start of callback methods -- notifications are coming from different threads
@@ -340,6 +350,7 @@ public class DeviceNavController extends Activity implements ListViewController.
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                isBrowseInProgress = false;
                 createNewListFragment(item, null);
                 mLoadingSpinner.setVisibility(View.GONE);
             }

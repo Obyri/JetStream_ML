@@ -85,7 +85,7 @@ public class ListAdapterController<T> extends ArrayAdapter<T> {
             titleText.setText(rowViewItem.toString());
             descText.setText(rowViewItem.getDescriptionText());
 
-            // lookup rowView has icon bitmap.
+            // lookup rowView has icon bitmap already.
             boolean isIconSet = false;
             if (rowViewItem.getIconImage() != null) {
                 iconView.setImageBitmap(rowViewItem.getIconImage());
@@ -109,14 +109,17 @@ public class ListAdapterController<T> extends ArrayAdapter<T> {
                     viewWrapper.executeTask(rowViewItem);
 
                 } else {
-                    // Movies/Videos have different icon.
+                    // Movies/Videos etc have different icon.
                     if (((ItemModel) rowViewItem.getItemModel()).getItem().getFirstResource().getProtocolInfo().getContentFormat().contains("video")) {
-                        iconView.setImageResource(R.mipmap.ic_movie);
+                        iconView.setImageResource(R.mipmap.ic_video);
                         viewWrapper.executeTask(rowViewItem);
+                    } else if (((ItemModel) rowViewItem.getItemModel()).getItem().getFirstResource().getProtocolInfo().getContentFormat().contains("music")) {
+                        iconView.setImageResource(R.mipmap.ic_music);
+                    } else if (((ItemModel) rowViewItem.getItemModel()).getItem().getFirstResource().getProtocolInfo().getContentFormat().contains("image")) {
+                        iconView.setImageResource(R.mipmap.ic_image);
                     } else {
                         iconView.setImageResource(R.mipmap.ic_unknown);
                     }
-                    //todo add more icons music/images etc...
                 }
             }
 

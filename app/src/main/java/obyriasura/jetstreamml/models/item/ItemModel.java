@@ -29,7 +29,7 @@ import java.net.URL;
 
 import obyriasura.jetstreamml.helpers.Constants;
 import obyriasura.jetstreamml.helpers.ItemTypeEnum;
-import obyriasura.jetstreamml.models.service.ServiceController;
+import obyriasura.jetstreamml.models.service.ServiceManager;
 
 /**
  * A Concrete class describing a media item,
@@ -67,7 +67,7 @@ public class ItemModel extends AbstractChildModel {
     }
 
     @Override
-    public boolean browseChildren(ServiceController serviceController) {
+    public boolean browseChildren(ServiceManager serviceManager) {
         return false;
     }
 

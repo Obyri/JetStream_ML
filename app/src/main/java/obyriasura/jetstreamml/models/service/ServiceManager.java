@@ -48,13 +48,13 @@ import obyriasura.jetstreamml.models.item.ItemModel;
  * update device lists.
  * and browse into devices/containers/folders.
  */
-public class ServiceController implements UpnpServiceWrapper.UpnpServiceListener {
+public class ServiceManager implements UpnpServiceWrapper.UpnpServiceListener {
 
     private UpnpServiceWrapper upnpServiceWrapper;
     private ArrayList<AbstractItemModel> devicesList = new ArrayList<>();
     private ControlPointListener controlPointListener;
 
-    public ServiceController(Activity androidActivity) throws IllegalArgumentException {
+    public ServiceManager(Activity androidActivity) throws IllegalArgumentException {
         // Setup UPNP Service after their is an adapter to receive input (ASYNC).
         upnpServiceWrapper = new UpnpServiceWrapper(androidActivity);
 
@@ -156,6 +156,7 @@ public class ServiceController implements UpnpServiceWrapper.UpnpServiceListener
 
     public boolean createBrowseAction(Service contentDirectoryService, String id, AbstractItemModel itemModel) {
         try {
+            //todo .execute return a future obj, use to trigger cancel etc...
             getControlPoint().execute(new BrowseActionCallback(contentDirectoryService, id, itemModel));
             return true;
         } catch (Exception ex) {
@@ -167,9 +168,9 @@ public class ServiceController implements UpnpServiceWrapper.UpnpServiceListener
      * Listener interface that notifies the listening class about updates to the model.
      */
     public interface ControlPointListener {
-        public void devicesChanged();
+        void devicesChanged();
 
-        public void browseComplete(AbstractItemModel item);
+        void browseComplete(AbstractItemModel item);
     }
 
     class BrowseActionCallback extends Browse {

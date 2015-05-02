@@ -66,6 +66,10 @@ public class RetrieveRemoteBitmapTask extends AsyncTask<RowViewModel, Void, Bitm
             byte[] rawByteData = byteStream.toByteArray();
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inTargetDensity = 20;
+            if (isCancelled()) {
+                is.close();
+                return null;
+            }
             Bitmap bm = getResizedBitmap(BitmapFactory.decodeByteArray(rawByteData, 0, rawByteData.length, options), 120, 120);
             params[0].setIconImage(bm);
             is.close();
@@ -83,8 +87,10 @@ public class RetrieveRemoteBitmapTask extends AsyncTask<RowViewModel, Void, Bitm
         float scaleWidth = ((float) newWidth) / width;
         float scaleHeight = ((float) newHeight) / height;
         if (scaleHeight >= 1 || scaleWidth >= 1) return bm;
+        // preserve aspect with same smallest scale factor for both X&Y.
+        float scale = scaleHeight > scaleWidth ? scaleWidth : scaleHeight;
         Matrix matrix = new Matrix();
-        matrix.postScale(scaleWidth, scaleHeight);
+        matrix.postScale(scale, scale);
 
         Bitmap resizedBitmap = Bitmap.createBitmap(bm, 0, 0, width, height, matrix, false);
         bm.recycle();

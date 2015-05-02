@@ -30,7 +30,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 import obyriasura.jetstreamml.helpers.ItemTypeEnum;
-import obyriasura.jetstreamml.models.service.ServiceController;
+import obyriasura.jetstreamml.models.service.ServiceManager;
 
 /**
  * A Concrete model describing a media device on the network.
@@ -105,8 +105,8 @@ public class DeviceModel extends AbstractItemModel {
     }
 
     @Override
-    public boolean browseChildren(ServiceController serviceController) {
-        return serviceController != null && serviceController.createBrowseAction(this.getContentDirectoryService(), "0", this);
+    public boolean browseChildren(ServiceManager serviceManager) {
+        return serviceManager != null && serviceManager.createBrowseAction(this.getContentDirectoryService(), "0", this);
     }
 
     @Override

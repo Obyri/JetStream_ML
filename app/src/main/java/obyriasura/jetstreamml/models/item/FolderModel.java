@@ -29,7 +29,7 @@ import java.net.URL;
 
 import obyriasura.jetstreamml.helpers.Constants;
 import obyriasura.jetstreamml.helpers.ItemTypeEnum;
-import obyriasura.jetstreamml.models.service.ServiceController;
+import obyriasura.jetstreamml.models.service.ServiceManager;
 
 /**
  * A Concrete model describing a folder item,
@@ -69,8 +69,8 @@ public class FolderModel extends AbstractChildModel {
     }
 
     @Override
-    public boolean browseChildren(ServiceController serviceController) {
-        return serviceController != null && serviceController.createBrowseAction(this.getContentDirectoryService(), this.getId(), this);
+    public boolean browseChildren(ServiceManager serviceManager) {
+        return serviceManager != null && serviceManager.createBrowseAction(this.getContentDirectoryService(), this.getId(), this);
     }
 
     @Override

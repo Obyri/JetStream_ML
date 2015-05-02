@@ -151,10 +151,12 @@ public class ListViewController extends Fragment implements AbsListView.OnItemCl
      */
     public void setAdapter(ArrayList<AbstractItemModel> arrayList) {
         if (arrayList.size() <= 0) {
-            mAdapter.clear();
+            if (mAdapter != null)
+                mAdapter.clear();
             return;
         }
 
+        // Put Found Item into viewmodel
         ArrayList<RowViewModel> viewModels = new ArrayList<>();
         for (AbstractItemModel item : arrayList) {
             viewModels.add(new RowViewModel(item.toString(), item.getDescription(), this.getActivity(), item, item.getItemType()));
@@ -180,8 +182,7 @@ public class ListViewController extends Fragment implements AbsListView.OnItemCl
      * Interface for content holder to implement for callbacks
      */
     public interface FragmentEventListener {
-        public void onItemSelectListener(Object object);
+        void onItemSelectListener(Object object);
     }
-
 
 }

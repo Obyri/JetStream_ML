@@ -31,8 +31,8 @@ import obyriasura.jetstreamml.models.item.AbstractItemModel;
  */
 public class RowViewModel {
 
-    private String mTitleText = new String();
-    private String mDescriptionText = new String();
+    private String mTitleText;
+    private String mDescriptionText;
     private Bitmap mIconImage;
     private Context mContext;
     private ItemTypeEnum mType;
@@ -51,16 +51,12 @@ public class RowViewModel {
     }
 
     public RowViewModel(String title, String desc, Bitmap bitmap, Context appContext, AbstractItemModel itemModel, ItemTypeEnum type) {
-        this.mTitleText = title != null ? title : new String();
-        this.mDescriptionText = desc != null ? desc : new String();
+        this.mTitleText = title != null ? title : "";
+        this.mDescriptionText = desc != null ? desc : "";
         this.mIconImage = bitmap != null ? bitmap : null;
         this.mContext = appContext;
         this.mType = type;
         this.mItemModel = itemModel;
-    }
-
-    public String getTitleText() {
-        return mTitleText;
     }
 
     public String getDescriptionText() {

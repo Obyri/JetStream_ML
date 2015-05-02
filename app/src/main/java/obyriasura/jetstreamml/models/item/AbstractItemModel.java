@@ -28,7 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import obyriasura.jetstreamml.helpers.ItemTypeEnum;
-import obyriasura.jetstreamml.models.service.ServiceController;
+import obyriasura.jetstreamml.models.service.ServiceManager;
 
 /**
  * A generic custom abstract class that wraps a DIDL object from the cling library.
@@ -100,7 +100,7 @@ public abstract class AbstractItemModel {
     }
 
     // Abstract Methods
-    public abstract boolean browseChildren(ServiceController serviceController);
+    public abstract boolean browseChildren(ServiceManager serviceManager);
 
     public abstract String getDescription();
 
