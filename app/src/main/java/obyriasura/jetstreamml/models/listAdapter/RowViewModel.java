@@ -20,7 +20,6 @@
 
 package obyriasura.jetstreamml.models.listAdapter;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 
 import obyriasura.jetstreamml.helpers.ItemTypeEnum;
@@ -34,27 +33,29 @@ public class RowViewModel {
     private String mTitleText;
     private String mDescriptionText;
     private Bitmap mIconImage;
-    private Context mContext;
     private ItemTypeEnum mType;
     private AbstractItemModel mItemModel;
 
-    public RowViewModel(Context appContext, AbstractItemModel itemModel) {
-        this(null, null, null, appContext, itemModel, ItemTypeEnum.TYPE_UNKNOWN);
+    public RowViewModel(AbstractItemModel itemModel) {
+        this(null, null, null, itemModel, ItemTypeEnum.TYPE_UNKNOWN);
     }
 
-    public RowViewModel(String title, String desc, Context appContext, AbstractItemModel itemModel) {
-        this(title, desc, null, appContext, itemModel, ItemTypeEnum.TYPE_UNKNOWN);
+    public RowViewModel(String title, String desc, AbstractItemModel itemModel) {
+        this(title, desc, null, itemModel, ItemTypeEnum.TYPE_UNKNOWN);
     }
 
-    public RowViewModel(String title, String desc, Context appContext, AbstractItemModel itemModel, ItemTypeEnum type) {
-        this(title, desc, null, appContext, itemModel, type);
+    public RowViewModel(String title, String desc, Bitmap bitmap, AbstractItemModel itemModel) {
+        this(title, desc, bitmap, itemModel, ItemTypeEnum.TYPE_UNKNOWN);
     }
 
-    public RowViewModel(String title, String desc, Bitmap bitmap, Context appContext, AbstractItemModel itemModel, ItemTypeEnum type) {
+    public RowViewModel(String title, String desc, AbstractItemModel itemModel, ItemTypeEnum type) {
+        this(title, desc, null, itemModel, type);
+    }
+
+    public RowViewModel(String title, String desc, Bitmap bitmap, AbstractItemModel itemModel, ItemTypeEnum type) {
         this.mTitleText = title != null ? title : "";
         this.mDescriptionText = desc != null ? desc : "";
         this.mIconImage = bitmap != null ? bitmap : null;
-        this.mContext = appContext;
         this.mType = type;
         this.mItemModel = itemModel;
     }

@@ -11,7 +11,7 @@
 
     <ProgressBar
         android:id="@+id/spin_loader"
-        style="@android:style/Widget.ProgressBar.Large"
+        style="@android:style/Widget.ProgressBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerVertical="true"

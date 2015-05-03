@@ -154,14 +154,14 @@ public class DeviceNavController extends Activity implements ListViewController.
     public boolean onCreateOptionsMenu(final Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_browse_view, menu);
-        MenuItem item = menu.findItem(R.id.action_settings);
+        /*MenuItem item = menu.findItem(R.id.action_settings);
         item.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem menuItem) {
                 return onOptionsItemSelected(menuItem);
             }
-        });
-        item = menu.findItem(R.id.rescan_button);
+        });*/
+        MenuItem item = menu.findItem(R.id.rescan_button);
         item.setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
@@ -186,9 +186,9 @@ public class DeviceNavController extends Activity implements ListViewController.
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        /*if (id == R.id.action_settings) {
             return true;
-        }
+        }*/
         if (id == R.id.rescan_button) {
             if (serviceManager == null)
                 return false;
@@ -258,30 +258,32 @@ public class DeviceNavController extends Activity implements ListViewController.
                     makePopupWithMessage(getString(R.string.info_handler_not_available));
                 }
                 return;
-            }
+            } else {
 
-            mLoadingSpinner.setVisibility(View.VISIBLE);
-            isBrowseInProgress = true;
+                mLoadingSpinner.setVisibility(View.VISIBLE);
+                isBrowseInProgress = true;
 
-            if (selectedItem instanceof DeviceModel) {
-                final DeviceModel deviceModel = (DeviceModel) selectedItem;
-                if (deviceModel.getDevice().isFullyHydrated()) {
-                    if (!deviceModel.browseChildren(serviceManager)) {
-                        makePopupWithMessage(getString(R.string.cannot_browse));
-                        isBrowseInProgress = false;
+                if (selectedItem instanceof DeviceModel) {
+                    final DeviceModel deviceModel = (DeviceModel) selectedItem;
+                    if (deviceModel.getDevice().isFullyHydrated()) {
+                        if (!deviceModel.browseChildren(serviceManager)) {
+                            makePopupWithMessage(getString(R.string.cannot_browse));
+                            isBrowseInProgress = false;
+                        }
+                    } else {
+                        makePopupWithMessage(getString(R.string.device_still_registering));
+                    }
+                } else if (selectedItem instanceof FolderModel) {
+                    final FolderModel folderModel = (FolderModel) selectedItem;
+                    if (folderModel.getFolder() != null) {
+                        if (!folderModel.browseChildren(serviceManager)) {
+                            makePopupWithMessage(getString(R.string.cannot_browse));
+                            isBrowseInProgress = false;
+                        }
                     }
                 } else {
-                    makePopupWithMessage(getString(R.string.device_still_registering));
-                }
-            }
-
-            if (selectedItem instanceof FolderModel) {
-                final FolderModel folderModel = (FolderModel) selectedItem;
-                if (folderModel.getFolder() != null) {
-                    if (!folderModel.browseChildren(serviceManager)) {
-                        makePopupWithMessage(getString(R.string.cannot_browse));
-                        isBrowseInProgress = false;
-                    }
+                    mLoadingSpinner.setVisibility(View.GONE);
+                    isBrowseInProgress = false;
                 }
             }
         }

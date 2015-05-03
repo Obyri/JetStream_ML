@@ -22,6 +22,7 @@ package obyriasura.jetstreamml.controllers;
 
 import android.app.Activity;
 import android.app.Fragment;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -97,6 +98,8 @@ public class ListViewController extends Fragment implements AbsListView.OnItemCl
         // retain instances of the fragments for easy config change.
         setRetainInstance(true);
         if (savedInstanceState == null) {
+            if (mArrayList.size() <= 0)
+                mArrayList.add(new RowViewModel(getString(R.string.no_items), "", BitmapFactory.decodeResource(getResources(), R.mipmap.ic_unknown), null));
             mAdapter = new ListAdapterController<>(getActivity(),
                     R.layout.row_layout, mArrayList);
         }
@@ -159,7 +162,7 @@ public class ListViewController extends Fragment implements AbsListView.OnItemCl
         // Put Found Item into viewmodel
         ArrayList<RowViewModel> viewModels = new ArrayList<>();
         for (AbstractItemModel item : arrayList) {
-            viewModels.add(new RowViewModel(item.toString(), item.getDescription(), this.getActivity(), item, item.getItemType()));
+            viewModels.add(new RowViewModel(item.toString(), item.getDescription(), item, item.getItemType()));
         }
         if (mAdapter != null) {
             mAdapter.clear();

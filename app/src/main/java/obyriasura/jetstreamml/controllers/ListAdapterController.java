@@ -49,7 +49,7 @@ public class ListAdapterController<T> extends ArrayAdapter<T> {
 
     private final LayoutInflater mInflater;
     private final int mResource;
-    List<ViewWrapper> viewsOnDisplay = new ArrayList<>();
+    List<ViewTaskWrapper> viewsOnDisplay = new ArrayList<>();
 
     TextView titleText;
     TextView descText;
@@ -65,14 +65,14 @@ public class ListAdapterController<T> extends ArrayAdapter<T> {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         View rowView;
-        ViewWrapper viewWrapper = null;
+        ViewTaskWrapper viewTaskWrapper = null;
         if (convertView == null) {
             rowView = mInflater.inflate(mResource, parent, false);
         } else {
             rowView = convertView;
             if (hasRowView(convertView)) {
-                viewWrapper = getMatchingView(convertView);
-                viewWrapper.cancelTask();
+                viewTaskWrapper = getMatchingView(convertView);
+                if (viewTaskWrapper != null) viewTaskWrapper.cancelTask();
             }
         }
 
@@ -94,26 +94,26 @@ public class ListAdapterController<T> extends ArrayAdapter<T> {
 
             // set default and try remote lookup icon.
             if (!isIconSet) {
-                if (viewWrapper != null && viewWrapper.isTaskCancelled()) {
-                    viewWrapper.resetBackgroundTask(iconView);
-                } else if (viewWrapper == null) {
-                    viewWrapper = new ViewWrapper(iconView, rowView);
+                if (viewTaskWrapper != null && viewTaskWrapper.isTaskCancelled()) {
+                    viewTaskWrapper.resetBackgroundTask(iconView);
+                } else if (viewTaskWrapper == null) {
+                    viewTaskWrapper = new ViewTaskWrapper(iconView, rowView);
                 }
 
                 if (rowViewItem.getType().equals(ItemTypeEnum.TYPE_DEVICE)) {
                     iconView.setImageResource(R.mipmap.ic_device);
-                    viewWrapper.executeTask(rowViewItem);
+                    viewTaskWrapper.executeTask(rowViewItem);
 
                 } else if (rowViewItem.getType() == ItemTypeEnum.TYPE_FOLDER) {
                     iconView.setImageResource(R.mipmap.ic_folder);
-                    viewWrapper.executeTask(rowViewItem);
+                    viewTaskWrapper.executeTask(rowViewItem);
 
                 } else {
                     // Movies/Videos etc have different icon.
                     if (((ItemModel) rowViewItem.getItemModel()).getItem().getFirstResource().getProtocolInfo().getContentFormat().contains("video")) {
                         iconView.setImageResource(R.mipmap.ic_video);
-                        viewWrapper.executeTask(rowViewItem);
-                    } else if (((ItemModel) rowViewItem.getItemModel()).getItem().getFirstResource().getProtocolInfo().getContentFormat().contains("music")) {
+                        viewTaskWrapper.executeTask(rowViewItem);
+                    } else if (((ItemModel) rowViewItem.getItemModel()).getItem().getFirstResource().getProtocolInfo().getContentFormat().contains("audio")) {
                         iconView.setImageResource(R.mipmap.ic_music);
                     } else if (((ItemModel) rowViewItem.getItemModel()).getItem().getFirstResource().getProtocolInfo().getContentFormat().contains("image")) {
                         iconView.setImageResource(R.mipmap.ic_image);
@@ -123,7 +123,7 @@ public class ListAdapterController<T> extends ArrayAdapter<T> {
                 }
             }
 
-            if (!hasRowView(rowView)) viewsOnDisplay.add(viewWrapper);
+            if (!hasRowView(rowView)) viewsOnDisplay.add(viewTaskWrapper);
         } catch (ClassCastException ex) {
             Log.e("ArrayAdapter", "Incompatible or unknown types within the array");
         }
@@ -134,10 +134,10 @@ public class ListAdapterController<T> extends ArrayAdapter<T> {
         return view != null && getMatchingView(view) != null;
     }
 
-    private ViewWrapper getMatchingView(View view) {
+    private ViewTaskWrapper getMatchingView(View view) {
         try {
             if (view != null) {
-                for (ViewWrapper viewMatch : viewsOnDisplay) {
+                for (ViewTaskWrapper viewMatch : viewsOnDisplay) {
                     if (viewMatch.viewRef.get() != null && view.equals(viewMatch.viewRef.get()))
                         return viewMatch;
                 }
@@ -146,12 +146,12 @@ public class ListAdapterController<T> extends ArrayAdapter<T> {
         return null;
     }
 
-    private class ViewWrapper {
+    private class ViewTaskWrapper {
         private WeakReference<View> viewRef;
         private RetrieveRemoteBitmapTask bitmapTask;
         private boolean taskCancelled = false;
 
-        public ViewWrapper(ImageView imageView, View view) {
+        public ViewTaskWrapper(ImageView imageView, View view) {
             if (imageView != null && view != null) {
                 this.viewRef = new WeakReference<>(view);
                 this.bitmapTask = new RetrieveRemoteBitmapTask(imageView);
