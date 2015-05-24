@@ -44,6 +44,7 @@ public class RetrieveRemoteBitmapTask extends AsyncTask<RowViewModel, Void, Bitm
      * Async Task to retrieve a remote bitmap file from a ItemModel.
      */
     private final WeakReference<ImageView> iconViewRef;
+    private RowViewModel rowViewModel = null;
 
     RetrieveRemoteBitmapTask(ImageView iconView) {
         iconViewRef = new WeakReference<>(iconView);
@@ -51,9 +52,10 @@ public class RetrieveRemoteBitmapTask extends AsyncTask<RowViewModel, Void, Bitm
 
     @Override
     protected Bitmap doInBackground(RowViewModel... params) {
+        rowViewModel = params[0];
         InputStream is;
         try {
-            AbstractItemModel itemModel = params[0].getItemModel();
+            AbstractItemModel itemModel = rowViewModel.getItemModel();
             URLConnection urlConnection = itemModel.getIconUrl().openConnection();
             is = new BufferedInputStream(urlConnection.getInputStream());
             ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
@@ -71,7 +73,7 @@ public class RetrieveRemoteBitmapTask extends AsyncTask<RowViewModel, Void, Bitm
                 return null;
             }
             Bitmap bm = getResizedBitmap(BitmapFactory.decodeByteArray(rawByteData, 0, rawByteData.length, options), 120, 120);
-            params[0].setIconImage(bm);
+            rowViewModel.setIconImage(bm);
             is.close();
             return bm;
         } catch (IOException e) {
@@ -101,12 +103,19 @@ public class RetrieveRemoteBitmapTask extends AsyncTask<RowViewModel, Void, Bitm
     @Override
     protected void onPostExecute(Bitmap bitmap) {
         // No point continuing here.
-        if (isCancelled()) return;
+        if (isCancelled()) {
+            bitmap = null;
+            return;
+        }
         if (iconViewRef.get() != null && bitmap != null) {
             final ImageView iconViewActual = iconViewRef.get();
-            if (iconViewActual != null) {
+            if (iconViewActual != null && this == ListAdapterController.getBitmapTaskFromImageView(iconViewActual) ) {
                 iconViewActual.setImageBitmap(bitmap);
             }
         }
+    }
+
+    public RowViewModel getRowViewModel() {
+        return rowViewModel;
     }
 }

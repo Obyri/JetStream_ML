@@ -21,6 +21,11 @@
 package obyriasura.jetstreamml.controllers;
 
 import android.content.Context;
+import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -49,7 +54,6 @@ public class ListAdapterController<T> extends ArrayAdapter<T> {
 
     private final LayoutInflater mInflater;
     private final int mResource;
-    List<ViewTaskWrapper> viewsOnDisplay = new ArrayList<>();
 
     TextView titleText;
     TextView descText;
@@ -65,15 +69,10 @@ public class ListAdapterController<T> extends ArrayAdapter<T> {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         View rowView;
-        ViewTaskWrapper viewTaskWrapper = null;
         if (convertView == null) {
             rowView = mInflater.inflate(mResource, parent, false);
         } else {
             rowView = convertView;
-            if (hasRowView(convertView)) {
-                viewTaskWrapper = getMatchingView(convertView);
-                if (viewTaskWrapper != null) viewTaskWrapper.cancelTask();
-            }
         }
 
         titleText = (TextView) rowView.findViewById(R.id.text1);
@@ -85,98 +84,93 @@ public class ListAdapterController<T> extends ArrayAdapter<T> {
             titleText.setText(rowViewItem.toString());
             descText.setText(rowViewItem.getDescriptionText());
 
-            // lookup rowView has icon bitmap already.
-            boolean isIconSet = false;
-            if (rowViewItem.getIconImage() != null) {
-                iconView.setImageBitmap(rowViewItem.getIconImage());
-                isIconSet = true;
-            }
-
             // set default and try remote lookup icon.
-            if (!isIconSet) {
-                if (viewTaskWrapper != null && viewTaskWrapper.isTaskCancelled()) {
-                    viewTaskWrapper.resetBackgroundTask(iconView);
-                } else if (viewTaskWrapper == null) {
-                    viewTaskWrapper = new ViewTaskWrapper(iconView, rowView);
-                }
-
                 if (rowViewItem.getType().equals(ItemTypeEnum.TYPE_DEVICE)) {
-                    iconView.setImageResource(R.mipmap.ic_device);
-                    viewTaskWrapper.executeTask(rowViewItem);
+                    //iconView.setImageResource(R.mipmap.ic_device);
+                    loadBitmap(rowViewItem, BitmapFactory.decodeResource(getResources(), R.mipmap.ic_device), iconView);
 
                 } else if (rowViewItem.getType() == ItemTypeEnum.TYPE_FOLDER) {
-                    iconView.setImageResource(R.mipmap.ic_folder);
-                    viewTaskWrapper.executeTask(rowViewItem);
+                    loadBitmap(rowViewItem, BitmapFactory.decodeResource(getResources(), R.mipmap.ic_folder), iconView);
 
-                } else {
+                } else if (rowViewItem.getType() == ItemTypeEnum.TYPE_ITEM) {
                     // Movies/Videos etc have different icon.
                     if (((ItemModel) rowViewItem.getItemModel()).getItem().getFirstResource().getProtocolInfo().getContentFormat().contains("video")) {
-                        iconView.setImageResource(R.mipmap.ic_video);
-                        viewTaskWrapper.executeTask(rowViewItem);
+                        loadBitmap(rowViewItem, BitmapFactory.decodeResource(getResources(), R.mipmap.ic_video), iconView);
                     } else if (((ItemModel) rowViewItem.getItemModel()).getItem().getFirstResource().getProtocolInfo().getContentFormat().contains("audio")) {
-                        iconView.setImageResource(R.mipmap.ic_music);
+                        loadBitmap(rowViewItem, BitmapFactory.decodeResource(getResources(), R.mipmap.ic_music), iconView);
                     } else if (((ItemModel) rowViewItem.getItemModel()).getItem().getFirstResource().getProtocolInfo().getContentFormat().contains("image")) {
-                        iconView.setImageResource(R.mipmap.ic_image);
+                        loadBitmap(rowViewItem, BitmapFactory.decodeResource(getResources(), R.mipmap.ic_image), iconView);
                     } else {
-                        iconView.setImageResource(R.mipmap.ic_unknown);
+                        loadBitmap(rowViewItem, BitmapFactory.decodeResource(getResources(), R.mipmap.ic_unknown), iconView);
                     }
+                } else {
+                    loadBitmap(rowViewItem, BitmapFactory.decodeResource(getResources(), R.mipmap.ic_unknown), iconView);
                 }
-            }
 
-            if (!hasRowView(rowView)) viewsOnDisplay.add(viewTaskWrapper);
         } catch (ClassCastException ex) {
             Log.e("ArrayAdapter", "Incompatible or unknown types within the array");
         }
         return rowView;
     }
 
-    private boolean hasRowView(View view) {
-        return view != null && getMatchingView(view) != null;
+    private void loadBitmap(RowViewModel rowViewModel,Bitmap placeholderBitmap, ImageView imageView) {
+        if (rowViewModel == null) return;
+        if (rowViewModel.getIconImage() != null) {
+            imageView.setImageBitmap(rowViewModel.getIconImage());
+            return;
+        }
+
+        if (cancelTask(rowViewModel, imageView)) {
+            RetrieveRemoteBitmapTask task = new RetrieveRemoteBitmapTask(imageView);
+            IconViewAsyncDrawable iconViewAsyncDrawable = new IconViewAsyncDrawable(getResources(), placeholderBitmap, task);
+            imageView.setImageDrawable(iconViewAsyncDrawable);
+            task.execute(rowViewModel);
+        }
     }
 
-    private ViewTaskWrapper getMatchingView(View view) {
-        try {
-            if (view != null) {
-                for (ViewTaskWrapper viewMatch : viewsOnDisplay) {
-                    if (viewMatch.viewRef.get() != null && view.equals(viewMatch.viewRef.get()))
-                        return viewMatch;
-                }
+    private boolean cancelTask(RowViewModel rowViewModel, ImageView imageView) {
+        RetrieveRemoteBitmapTask task = getBitmapTaskFromImageView(imageView);
+        if (task != null ) {
+            RowViewModel taskRowViewModel = task.getRowViewModel();
+            if (taskRowViewModel == null || taskRowViewModel != rowViewModel) {
+                task.cancel(true);
+            } else {
+                return false;
             }
-        } catch (NullPointerException ex) {/*Do nothing*/}
+        }
+        return true;
+    }
+
+    public static RetrieveRemoteBitmapTask getBitmapTaskFromImageView(ImageView imageView) {
+        if (imageView != null) {
+            Drawable drawable = imageView.getDrawable();
+            if (drawable instanceof IconViewAsyncDrawable) {
+                IconViewAsyncDrawable iconViewAsyncDrawable =  (IconViewAsyncDrawable) drawable;
+                return iconViewAsyncDrawable.getRemoteBitmapTask();
+            }
+        }
         return null;
     }
 
-    private class ViewTaskWrapper {
-        private WeakReference<View> viewRef;
-        private RetrieveRemoteBitmapTask bitmapTask;
-        private boolean taskCancelled = false;
+    private Resources getResources() {
+        return getContext().getResources();
+    }
 
-        public ViewTaskWrapper(ImageView imageView, View view) {
-            if (imageView != null && view != null) {
-                this.viewRef = new WeakReference<>(view);
-                this.bitmapTask = new RetrieveRemoteBitmapTask(imageView);
-                taskCancelled = false;
-            }
+
+    /**
+     * class wrapper of the async task to retrieve the thumbnail bitmap for the source.
+     * This class provides the reference to the task thread so it may be cancelled
+     */
+    private static class IconViewAsyncDrawable extends BitmapDrawable {
+        private WeakReference<RetrieveRemoteBitmapTask> mBitmapTask;
+
+        public IconViewAsyncDrawable(Resources resources, Bitmap bitmap, RetrieveRemoteBitmapTask bitmapTask) {
+            super(resources, bitmap);
+            mBitmapTask = new WeakReference<>(bitmapTask);
         }
 
-        public void executeTask(RowViewModel item) {
-            this.bitmapTask.execute(item);
-        }
-
-        public boolean cancelTask() {
-            taskCancelled = true;
-            return bitmapTask.cancel(true);
-        }
-
-        public boolean isTaskCancelled() {
-            return taskCancelled;
-        }
-
-        public void resetBackgroundTask(ImageView imageView) {
-            if (imageView != null && taskCancelled) {
-                bitmapTask = new RetrieveRemoteBitmapTask(imageView);
-                taskCancelled = false;
-            }
+        public RetrieveRemoteBitmapTask getRemoteBitmapTask() {
+            return mBitmapTask.get();
         }
     }
 }
