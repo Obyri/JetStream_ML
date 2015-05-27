@@ -50,11 +50,12 @@ import obyriasura.jetstreamml.models.item.ItemModel;
  */
 public class ServiceManager implements UpnpServiceWrapper.UpnpServiceListener {
 
+    private static ServiceManager instance;
     private UpnpServiceWrapper upnpServiceWrapper;
     private ArrayList<AbstractItemModel> devicesList = new ArrayList<>();
     private ControlPointListener controlPointListener;
 
-    public ServiceManager(Activity androidActivity) throws IllegalArgumentException {
+    private ServiceManager(Activity androidActivity) throws IllegalArgumentException {
         // Setup UPNP Service after their is an adapter to receive input (ASYNC).
         upnpServiceWrapper = new UpnpServiceWrapper(androidActivity);
 
@@ -71,6 +72,78 @@ public class ServiceManager implements UpnpServiceWrapper.UpnpServiceListener {
         if (androidActivity instanceof ControlPointListener)
             controlPointListener = (ControlPointListener) androidActivity;
 
+    }
+
+    public static ServiceManager startUpnpService(Activity activity) {
+        // Everything relies on the service
+        try {
+            instance = new ServiceManager(activity);
+        } catch (IllegalArgumentException ex) {
+            ex.printStackTrace();
+            instance = null;
+        } finally {
+            return instance;
+        }
+    }
+
+    public static ServiceManager getInstance() {
+        return instance;
+    }
+
+    public ArrayList<AbstractItemModel> getDevicesList() {
+        return devicesList;
+    }
+
+    public UpnpServiceWrapper getUpnpServiceWrapper() {
+        return upnpServiceWrapper;
+    }
+
+    public boolean unBindService() {
+        try {
+            return upnpServiceWrapper.unBindService();
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    public void scanForNewServices() {
+        this.getControlPoint().getRegistry().removeAllRemoteDevices();
+        this.getControlPoint().search();
+    }
+
+    /**
+     * Simple method to stop the service and cleanup resources.
+     *
+     * @return true on success, false otherwise.
+     */
+    public boolean stopService() {
+        try {
+            controlPointListener = null;
+            upnpServiceWrapper.unBindService();
+            upnpServiceWrapper.stopService();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Returns the Android Upnp Service Control Point
+     *
+     * @return Control Point.
+     */
+    public org.fourthline.cling.controlpoint.ControlPoint getControlPoint() {
+        return upnpServiceWrapper.getControlPoint();
+    }
+
+    public boolean createBrowseAction(Service contentDirectoryService, String id, AbstractItemModel itemModel) {
+        try {
+            //todo .execute return a future obj, use to trigger cancel etc...
+            getControlPoint().execute(new BrowseActionCallback(contentDirectoryService, id, itemModel));
+            return true;
+        } catch (Exception ex) {
+            return false;
+        }
     }
 
     /* Listener interface implementation. -------------- */
@@ -112,57 +185,6 @@ public class ServiceManager implements UpnpServiceWrapper.UpnpServiceListener {
         }
     }
     /* ------------------------------------------------- */
-
-    public ArrayList<AbstractItemModel> getDevicesList() {
-        return devicesList;
-    }
-
-    public UpnpServiceWrapper getUpnpServiceWrapper() {
-        return upnpServiceWrapper;
-    }
-
-    public boolean unBindService() {
-        try {
-            return upnpServiceWrapper.unBindService();
-        } catch (Exception ex) {
-            return false;
-        }
-    }
-
-    /**
-     * Simple method to stop the service and cleanup resources.
-     *
-     * @return true on success, false otherwise.
-     */
-    public boolean dispose() {
-        try {
-            controlPointListener = null;
-            upnpServiceWrapper.unBindService();
-            upnpServiceWrapper.stopService();
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    /**
-     * Returns the Android Upnp Service Control Point
-     *
-     * @return Control Point.
-     */
-    public org.fourthline.cling.controlpoint.ControlPoint getControlPoint() {
-        return upnpServiceWrapper.getControlPoint();
-    }
-
-    public boolean createBrowseAction(Service contentDirectoryService, String id, AbstractItemModel itemModel) {
-        try {
-            //todo .execute return a future obj, use to trigger cancel etc...
-            getControlPoint().execute(new BrowseActionCallback(contentDirectoryService, id, itemModel));
-            return true;
-        } catch (Exception ex) {
-            return false;
-        }
-    }
 
     /**
      * Listener interface that notifies the listening class about updates to the model.

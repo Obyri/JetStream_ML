@@ -58,6 +58,7 @@ import obyriasura.jetstreamml.models.service.ServiceManager;
 public class DeviceNavController extends Activity implements ListViewController.FragmentEventListener, ServiceManager.ControlPointListener {
 
     private ServiceManager serviceManager;
+    private Activity activity;
     /**
      * Animated spinning progress widget.
      */
@@ -65,6 +66,7 @@ public class DeviceNavController extends Activity implements ListViewController.
     private BroadcastReceiver connectivityChange = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+
             boolean isLanConnected = false;
 
             ConnectivityManager cm = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -82,7 +84,7 @@ public class DeviceNavController extends Activity implements ListViewController.
 
             if (isLanConnected) {
                 if (serviceManager == null) {
-                    if (startUpnpService()) {
+                    if ((serviceManager = ServiceManager.startUpnpService(getActivity())) != null) {
                         makePopupWithMessage(getString(R.string.scanning));
                         mLoadingSpinner.setVisibility(View.VISIBLE);
                         return;
@@ -90,10 +92,13 @@ public class DeviceNavController extends Activity implements ListViewController.
                     makePopupWithMessage("Service Failed to Start.");
                     finish();
                     return;
+                } else {
+                    serviceManager.scanForNewServices();
+                    return;
                 }
             } else {
                 if (serviceManager != null) {
-                    serviceManager.dispose();
+                    serviceManager.stopService();
                     serviceManager = null;
                     FragmentManager fm = getFragmentManager();
                     // empty the fragment list
@@ -106,14 +111,19 @@ public class DeviceNavController extends Activity implements ListViewController.
     };
     private boolean isBrowseInProgress = false;
 
+    public Activity getActivity() {
+        return activity;
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        this.activity = this;
         setContentView(R.layout.root_fragment_container);
         mLoadingSpinner = (ProgressBar) findViewById(R.id.spin_loader);
         mLoadingSpinner.setVisibility(View.VISIBLE);
 
-        if (!startUpnpService()) return;
+        if ((serviceManager = ServiceManager.startUpnpService(this)) == null) return;
 
         // Listen for connectivity changes.
         IntentFilter filter = new IntentFilter();
@@ -136,18 +146,6 @@ public class DeviceNavController extends Activity implements ListViewController.
         FragmentTransaction trans = getFragmentManager().beginTransaction();
         trans.add(R.id.fragment_holder, devList, Constants.DEVICE_LIST_TAG);
         trans.commit();
-    }
-
-    private boolean startUpnpService() {
-        // Everything relies on the service
-        try {
-            serviceManager = new ServiceManager(this);
-        } catch (IllegalArgumentException ex) {
-            ex.printStackTrace();
-            makePopupWithMessage("Fatal Error: Service Failed to Start.");
-            return false;
-        }
-        return true;
     }
 
     @Override
@@ -193,8 +191,7 @@ public class DeviceNavController extends Activity implements ListViewController.
             if (serviceManager == null)
                 return false;
             makePopupWithMessage(getString(R.string.scanning));
-            serviceManager.getControlPoint().getRegistry().removeAllRemoteDevices();
-            serviceManager.getControlPoint().search();
+            serviceManager.scanForNewServices();
             return true;
         }
 
@@ -202,10 +199,10 @@ public class DeviceNavController extends Activity implements ListViewController.
             if (isChangingConfigurations()) return true;
             boolean flag;
             if (serviceManager != null) {
-                flag = serviceManager.dispose();
+                flag = serviceManager.stopService();
                 serviceManager = null;
             } else {
-                flag = startUpnpService();
+                flag = (serviceManager = ServiceManager.startUpnpService(this)) != null;
             }
             return flag;
         }
@@ -218,13 +215,13 @@ public class DeviceNavController extends Activity implements ListViewController.
 
         Log.d(getString(R.string.app_name), "onDestroy");
 
-        // unbind to stop leaking, from service stays active and is rebound onCreate
+        // unbind to stop leaking, service stays active and is rebound onCreate
         serviceManager.unBindService();
         unregisterReceiver(connectivityChange);
 
         //Tear down upnp service completely when killing app.
         if (isFinishing())
-            if (serviceManager.dispose())
+            if (serviceManager.stopService())
                 serviceManager = null;
 
         super.onDestroy();
