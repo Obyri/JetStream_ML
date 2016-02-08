@@ -26,7 +26,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class IdentityDBHelper extends SQLiteOpenHelper {
 
-    private static final String DATABASE_NAME = "homestream";
+    private static final String DATABASE_NAME = "jetstream";
     private static int DATABASE_VERSION = 2;
 
     public IdentityDBHelper(Context context) {
